@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실시간 주제별 학급 토론장</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px; line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* 공통 카드 스타일 */
+    .card { background: var(--card-bg); padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .hidden { display: none !important; }
+
+    /* 헤더 */
+    header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 24px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.5rem; }
+    .btn-teacher { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+    .btn-teacher:hover { background: rgba(255,255,255,0.3); }
+
+    /* 폼 요소 */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.95rem; }
+    .form-control { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+    textarea.form-control { min-height: 90px; resize: vertical; }
+
+    .btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #6b7280; }
+    .btn-secondary:hover { background: #4b5563; }
+    .btn-success { background: #059669; }
+    .btn-success:hover { background: #047857; }
+
+    /* 주제 선택 리스트 */
+    .topic-item { border: 2px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+    .topic-item:hover { border-color: var(--primary); background: #f0fdf4; }
+    .topic-item h3 { font-size: 1.1rem; color: #111827; margin-bottom: 4px; }
+    .topic-item p { font-size: 0.9rem; color: #6b7280; }
+
+    /* 토론 카톡 스타일 리스트 */
+    .discussion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; }
+    .chat-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 4px solid var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+    .chat-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: #6b7280; margin-bottom: 6px; }
+    .chat-author { font-weight: bold; color: #111827; }
+    .chat-body { font-size: 0.98rem; white-space: pre-wrap; word-break: break-word; }
+    .chat-footer { display: flex; justify-content: flex-end; margin-top: 8px; gap: 8px; }
+    .btn-sm { background: none; border: none; font-size: 0.8rem; color: #6b7280; cursor: pointer; }
+    .btn-sm:hover { color: #ef4444; }
+
+    /* 발표용 화면 스타일 */
+    .present-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+    .final-card { background: #fff; border: 2px solid #3b82f6; border-radius: 12px; padding: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .final-card h4 { color: #1d4ed8; font-size: 1.1rem; margin-bottom: 8px; border-bottom: 1px dashed #bfdbfe; padding-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1 id="headerTitle">💬 실시간 학급 토론장</h1>
+      <button class="btn-teacher" id="teacherToggleBtn" onclick="toggleTeacherMode()">🔒 교사 메뉴</button>
+    </header>
+
+    <!-- 1. 학생 로그인 및 주제 선택 화면 -->
+    <div id="loginView" class="card">
+      <h2 style="margin-bottom:16px;">👋 토론장 입장하기</h2>
+      <div class="form-group">
+        <label>학번 및 이름</label>
+        <input type="text" id="studentInfo" class="form-control" placeholder="예: 10101 홍길동">
+      </div>
+      <h3 style="margin: 20px 0 10px 0;">📌 토론 주제 선택</h3>
+      <div id="topicList">
+        <p style="color:#9ca3af;">교사가 등록한 토론 주제를 불러오는 중입니다...</p>
+      </div>
+    </div>
+
+    <!-- 2. 학생 토론방 화면 -->
+    <div id="discussionView" class="hidden">
+      <!-- 주제 박스 -->
+      <div class="card" style="background: #eef2ff; border: 1px solid #c7d2fe;">
+        <button class="btn-sm" style="float:right;" onclick="exitDiscussion()">← 주제 다시 선택</button>
+        <span id="currentTopicTag" style="background:#4f46e5; color:white; padding:2px 8px; border-radius:4px; font-size:0.8rem;">주제</span>
+        <h2 id="currentTopicTitle" style="margin-top:8px;">주제 제목</h2>
+        <p id="currentTopicDesc" style="color:#4b5563; margin-top:4px;">주제 설명</p>
+      </div>
+
+      <!-- 의견 작성 -->
+      <div class="card">
+        <h3>💡 내 의견 남기기</h3>
+        <div class="form-group" style="margin-top:10px;">
+          <textarea id="chatInput" class="form-control" placeholder="자유롭게 의견이나 생각을 남겨주세요."></textarea>
+        </div>
+        <button class="btn" onclick="submitChat()">의견 등록하기</button>
+      </div>
+
+      <!-- 실시간 의견 목록 -->
+      <div class="card">
+        <div class="discussion-header">
+          <h3>💬 실시간 토론 목록 <span id="chatCount" style="color:var(--primary);">(0)</span></h3>
+        </div>
+        <div id="chatList"></div>
+      </div>
+
+      <!-- 최종 정리 제출 구역 -->
+      <div class="card" style="border: 2px solid #10b981; background: #f0fdf4;">
+        <h3>🎓 [최종 정리] 토론을 마친 후 내 최종 의견 작성하기</h3>
+        <p style="font-size:0.9rem; color:#065f46; margin-bottom:10px;">토론 내용을 바탕으로 정리한 자신의 최종 입장과 이유를 작성하여 제출하세요 (교사 발표 화면에 올려집니다).</p>
+        <div class="form-group">
+          <textarea id="finalInput" class="form-control" placeholder="예: 토론 결과 저는 ~라고 생각합니다. 왜냐하면 ~이기 때문입니다."></textarea>
+        </div>
+        <button class="btn btn-success" onclick="submitFinalSummary()">최종 의견 제출하기</button>
+      </div>
+    </div>
+
+    <!-- 3. 교사 관리 및 발표 화면 -->
+    <div id="teacherView" class="card hidden" style="border: 2px solid #4f46e5;">
+      <h2>🔒 교사 관리자 & 발표 화면</h2>
+      <hr style="margin: 16px 0;">
+
+      <!-- 주제 관리 (최대 5개) -->
+      <h3>📝 토론 주제 설정 (최대 5개)</h3>
+      <div id="topicAdminForm" style="margin-top:12px;"></div>
+      <button class="btn" style="margin-top:10px;" onclick="saveTopics()">주제 저장 및 적용하기</button>
+
+      <hr style="margin: 24px 0;">
+
+      <!-- 발표용 모드 선택 -->
+      <h3>📺 모둠/학급 발표 화면</h3>
+      <p style="font-size:0.9rem; color:#6b7280; margin-bottom:12px;">선택한 주제의 학생 최종 제출 의견을 전체 화면으로 살펴봅니다.</p>
+      <div class="form-group">
+        <select id="presentTopicSelect" class="form-control" onchange="renderPresentation()">
+          <option value="">-- 발표할 주제를 선택하세요 --</option>
+        </select>
+      </div>
+
+      <div id="presentationArea" class="present-grid"></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, increment 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAR8-iDEDwCMcoXM2dUE0j5qAe39CYUAcQ",
+      authDomain: "math-chantteacher.firebaseapp.com",
+      projectId: "math-chantteacher",
+      storageBucket: "math-chantteacher.firebasestorage.app",
+      messagingSenderId: "16801066944",
+      appId: "1:16801066944:web:5cb602f8824e33fa6be225",
+      measurementId: "G-ZWKVVX1ZJF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 상태 변수
+    let currentStudent = "";
+    let currentTopicId = null;
+    let topicsData = [];
+    let chatsData = [];
+    let finalsData = [];
+
+    // DOM
+    const loginView = document.getElementById("loginView");
+    const discussionView = document.getElementById("discussionView");
+    const teacherView = document.getElementById("teacherView");
+    const topicList = document.getElementById("topicList");
+
+    // 1. 주제 불러오기 (실시간)
+    onSnapshot(doc(db, "settings", "discussion_topics"), (docSnap) => {
+      if (docSnap.exists()) {
+        topicsData = docSnap.data().list || [];
+      } else {
+        // 기본 초기값 2개 제공
+        topicsData = [
+          { id: 1, title: "주제 1: 인공지능 활용 찬반", desc: "학교 숙제에 AI를 활용하는 것에 대해 토론해 봅시다." },
+          { id: 2, title: "주제 2: 휴대전화 지참 정책", desc: "수업 시간 휴대폰 소지에 대한 자유 의견을 나눕니다." }
+        ];
+      }
+      renderTopicList();
+      renderTeacherTopicForms();
+      updatePresentSelect();
+    });
+
+    // 주제 목록 그리기 (학생용)
+    function renderTopicList() {
+      topicList.innerHTML = "";
+      if(topicsData.length === 0) {
+        topicList.innerHTML = "<p style='color:#9ca3af;'>등록된 주제가 없습니다. 교사에게 문의하세요.</p>";
+        return;
+      }
+      topicsData.forEach((t, index) => {
+        if(!t.title) return;
+        const item = document.createElement("div");
+        item.className = "topic-item";
+        item.innerHTML = `<h3>📌 ${t.title}</h3><p>${t.desc || ''}</p>`;
+        item.onclick = () => enterDiscussion(t);
+        topicList.appendChild(item);
+      });
+    }
+
+    // 2. 토론방 입장
+    window.enterDiscussion = (topic) => {
+      const info = document.getElementById("studentInfo").value.trim();
+      if (!info) {
+        alert("입장하기 전 학번과 이름을 먼저 입력해 주세요!");
+        document.getElementById("studentInfo").focus();
+        return;
+      }
+      currentStudent = info;
+      currentTopicId = topic.id;
+
+      document.getElementById("currentTopicTitle").innerText = topic.title;
+      document.getElementById("currentTopicDesc").innerText = topic.desc || "";
+
+      loginView.classList.add("hidden");
+      discussionView.classList.remove("hidden");
+
+      // 해당 주제에 대한 토론글 & 최종 정리 실시간 구독
+      subscribeDiscussionData();
+    };
+
+    window.exitDiscussion = () => {
+      discussionView.classList.add("hidden");
+      loginView.classList.remove("hidden");
+      currentTopicId = null;
+    };
+
+    // 데이터 구독
+    function subscribeDiscussionData() {
+      // 실시간 채팅
+      const chatQ = query(collection(db, `topic_${currentTopicId}_chats`), orderBy("createdAt", "desc"));
+      onSnapshot(chatQ, (snapshot) => {
+        chatsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderChats();
+      });
+
+      // 최종 정리
+      const finalQ = query(collection(db, `topic_${currentTopicId}_finals`), orderBy("createdAt", "desc"));
+      onSnapshot(finalQ, (snapshot) => {
+        finalsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      });
+    }
+
+    // 의견 등록
+    window.submitChat = async () => {
+      const input = document.getElementById("chatInput");
+      const text = input.value.trim();
+      if(!text) return alert("의견을 입력해 주세요!");
+
+      await addDoc(collection(db, `topic_${currentTopicId}_chats`), {
+        author: currentStudent,
+        content: text,
+        likes: 0,
+        createdAt: new Date()
+      });
+      input.value = "";
+    };
+
+    function renderChats() {
+      const chatList = document.getElementById("chatList");
+      document.getElementById("chatCount").innerText = `(${chatsData.length})`;
+      chatList.innerHTML = "";
+
+      if(chatsData.length === 0) {
+        chatList.innerHTML = "<p style='color:#9ca3af; text-align:center; padding:20px;'>아직 의견이 없습니다. 첫 의견을 남겨보세요!</p>";
+        return;
+      }
+
+      chatsData.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "chat-card";
+        div.innerHTML = `
+          <div class="chat-meta">
+            <span class="chat-author">${c.author}</span>
+            <span>${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</span>
+          </div>
+          <div class="chat-body">${c.content}</div>
+          <div class="chat-footer">
+            <button class="btn-sm" onclick="likeChat('${c.id}')">❤️ 공감 ${c.likes || 0}</button>
+          </div>
+        `;
+        chatList.appendChild(div);
+      });
+    }
+
+    window.likeChat = async (id) => {
+      await updateDoc(doc(db, `topic_${currentTopicId}_chats`, id), { likes: increment(1) });
+    };
+
+    // 최종 정리 제출
+    window.submitFinalSummary = async () => {
+      const input = document.getElementById("finalInput");
+      const text = input.value.trim();
+      if(!text) return alert("최종 의견 내용을 입력해 주세요!");
+
+      await addDoc(collection(db, `topic_${currentTopicId}_finals`), {
+        author: currentStudent,
+        content: text,
+        createdAt: new Date()
+      });
+      alert("최종 의견이 성공적으로 제출되었습니다! 교사 발표 화면에 게시됩니다.");
+      input.value = "";
+    };
+
+    // --- 3. 교사 기능 ---
+    window.toggleTeacherMode = () => {
+      if(teacherView.classList.contains("hidden")) {
+        const pw = prompt("교사 비밀번호를 입력하세요 (기본: 1234):");
+        if(pw === "1234") {
+          teacherView.classList.remove("hidden");
+          loginView.classList.add("hidden");
+          discussionView.classList.add("hidden");
+        } else if(pw !== null) {
+          alert("비밀번호가 올바르지 않습니다.");
+        }
+      } else {
+        teacherView.classList.add("hidden");
+        loginView.classList.remove("hidden");
+      }
+    };
+
+    function renderTeacherTopicForms() {
+      const container = document.getElementById("topicAdminForm");
+      container.innerHTML = "";
+      for(let i = 0; i < 5; i++) {
+        const t = topicsData[i] || { id: i+1, title: "", desc: "" };
+        container.innerHTML += `
+          <div style="background:#f9fafb; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #e5e7eb;">
+            <strong>주제 ${i+1}</strong>
+            <input type="text" id="topicTitle_${i}" class="form-control" style="margin:4px 0;" placeholder="주제 제목 (예: AI 활용 찬반)" value="${t.title || ''}">
+            <input type="text" id="topicDesc_${i}" class="form-control" placeholder="주제 설명 및 발문" value="${t.desc || ''}">
+          </div>
+        `;
+      }
+    }
+
+    window.saveTopics = async () => {
+      const newList = [];
+      for(let i = 0; i < 5; i++) {
+        const title = document.getElementById(`topicTitle_${i}`).value.trim();
+        const desc = document.getElementById(`topicDesc_${i}`).value.trim();
+        if(title) {
+          newList.push({ id: i+1, title: title, desc: desc });
+        }
+      }
+      await setDoc(doc(db, "settings", "discussion_topics"), { list: newList });
+      alert("토론 주제가 저장되었습니다!");
+    };
+
+    function updatePresentSelect() {
+      const select = document.getElementById("presentTopicSelect");
+      select.innerHTML = '<option value="">-- 발표할 주제를 선택하세요 --</option>';
+      topicsData.forEach(t => {
+        if(t.title) select.innerHTML += `<option value="${t.id}">${t.title}</option>`;
+      });
+    }
+
+    window.renderPresentation = () => {
+      const topicId = document.getElementById("presentTopicSelect").value;
+      const area = document.getElementById("presentationArea");
+      area.innerHTML = "";
+
+      if(!topicId) return;
+
+      onSnapshot(query(collection(db, `topic_${topicId}_finals`), orderBy("createdAt", "desc")), (snapshot) => {
+        area.innerHTML = "";
+        if(snapshot.empty) {
+          area.innerHTML = "<p style='color:#9ca3af;'>아직 제출된 최종 의견이 없습니다.</p>";
+          return;
+        }
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          area.innerHTML += `
+            <div class="final-card">
+              <h4>👤 ${data.author}</h4>
+              <p style="white-space:pre-wrap; font-size:1.05rem; color:#1f2937;">${data.content}</p>
+            </div>
+          `;
+        });
+      });
+    };
+  </script>
+</body>
+</html>
