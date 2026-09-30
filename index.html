@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실시간 수학 토론 교실</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px; line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* 공통 카드 스타일 */
+    .card { background: var(--card-bg); padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .hidden { display: none !important; }
+
+    /* 헤더 */
+    header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 24px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.6rem; font-weight: 700; }
+    .btn-teacher { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-teacher:hover { background: rgba(255,255,255,0.3); }
+
+    /* 폼 요소 */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.95rem; }
+    .form-control { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+    textarea.form-control { min-height: 90px; resize: vertical; }
+
+    /* 2열 나란히 배치 */
+    .form-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .form-row .form-group { flex: 1; margin-bottom: 0; }
+
+    /* 동의 체크박스 스타일 */
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 12px; margin-bottom: 16px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+    .checkbox-group label { font-size: 0.92rem; font-weight: 500; color: #374151; cursor: pointer; margin-bottom: 0; }
+
+    .btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #6b7280; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .btn-secondary:hover { background: #4b5563; }
+    .btn-success { background: #059669; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
+    .btn-success:hover { background: #047857; }
+    .btn-danger { background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-present { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; width: 100%; margin-top: 8px; }
+    .btn-present:hover { background: #1d4ed8; }
+
+    /* 클릭 가능한 목록 카드 */
+    .list-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; background: white; display: flex; justify-content: space-between; align-items: center; }
+    .list-card:hover { border-color: var(--primary); background: #f0fdf4; }
+    .list-card h3 { font-size: 1.1rem; color: #111827; margin-bottom: 4px; }
+    .list-card p { font-size: 0.9rem; color: #6b7280; }
+
+    /* 토론 리스트 카드리스트 */
+    .discussion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; }
+    .chat-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 4px solid var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+    .chat-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: #6b7280; margin-bottom: 6px; }
+    .chat-author { font-weight: bold; color: #111827; }
+    .chat-body { font-size: 0.98rem; white-space: pre-wrap; word-break: break-word; }
+    .chat-footer { display: flex; justify-content: flex-end; margin-top: 8px; gap: 8px; }
+    .btn-sm { background: none; border: none; font-size: 0.85rem; color: #6b7280; cursor: pointer; }
+    .btn-sm:hover { color: #ef4444; }
+
+    /* 교사 관리 및 발표용 카드 그리드 */
+    .present-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+    .final-card { background: #fff; border: 2px solid #3b82f6; border-radius: 12px; padding: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s; }
+    .final-card:hover { transform: translateY(-3px); border-color: #1d4ed8; }
+    .final-card h4 { color: #1d4ed8; font-size: 1.1rem; margin-bottom: 8px; border-bottom: 1px dashed #bfdbfe; padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+
+    .admin-list-item { background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .admin-list-content { flex: 1; margin-right: 12px; }
+
+    /* 비밀번호 입력 모달 스타일 추가 */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+    .modal-content { background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1 id="headerTitle">📐 실시간 수학 토론 교실</h1>
+      <button class="btn-teacher" id="teacherToggleBtn" onclick="toggleTeacherMode()">🔒 교사 메뉴</button>
+    </header>
+
+    <!-- 비밀번호 입력 모달 -->
+    <div id="passwordModal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h3 style="margin-bottom: 12px;">🔒 교사 인증</h3>
+        <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 12px;">교사 비밀번호를 입력하세요.</p>
+        <input type="password" id="modalPasswordInput" class="form-control" style="margin-bottom: 16px;" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter') verifyTeacherPassword()">
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" onclick="verifyTeacherPassword()">확인</button>
+          <button class="btn btn-secondary" onclick="closePasswordModal()">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 학생: 수업 선택 & 인적사항 및 주제 선택 화면 -->
+    <div id="loginView" class="card">
+      <h2 style="margin-bottom:16px;">👋 수학 토론장 입장하기</h2>
+      
+      <div class="form-group">
+        <label for="studentClassSelect">1. 수업 선택</label>
+        <select id="studentClassSelect" class="form-control" onchange="onStudentClassChange(this.value)">
+          <option value="">-- 수업을 선택하세요 --</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="studentNum">2. 학번</label>
+          <input type="text" id="studentNum" class="form-control" placeholder="예: 10101">
+        </div>
+        <div class="form-group">
+          <label for="studentName">이름</label>
+          <input type="text" id="studentName" class="form-control" placeholder="예: 홍길동">
+        </div>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="privacyConsent">
+        <label for="privacyConsent">개인 정보 수집 및 이용에 동의합니다.</label>
+      </div>
+
+      <h3 style="margin: 20px 0 10px 0;">3. 토론 주제 선택</h3>
+      <div id="topicList">
+        <p style="color:#9ca3af;">수업을 먼저 선택하시면 토론 주제 목록이 나타납니다.</p>
+      </div>
+    </div>
+
+    <!-- 2. 학생 토론방 화면 -->
+    <div id="discussionView" class="hidden">
+      <div class="card" style="background: #eef2ff; border: 1px solid #c7d2fe;">
+        <button class="btn-sm" style="float:right;" onclick="exitDiscussion()">← 주제 다시 선택</button>
+        <span id="currentTopicTag" style="background:#4f46e5; color:white; padding:2px 8px; border-radius:4px; font-size:0.8rem;">수학 토론 주제</span>
+        <h2 id="currentTopicTitle" style="margin-top:8px;">주제 제목</h2>
+        <p id="currentTopicDesc" style="color:#4b5563; margin-top:4px;">주제 설명</p>
+      </div>
+
+      <div class="card">
+        <h3>💡 내 의견 남기기</h3>
+        <p style="font-size:0.85rem; color:#6b7280; margin-bottom:8px;">※ 새 의견을 등록하면 이전 작성한 의견은 자동으로 수정/교체됩니다.</p>
+        <div class="form-group">
+          <textarea id="chatInput" class="form-control" placeholder="풀이 과정이나 자신만의 해결 아이디어를 자유롭게 의견으로 등록해 보세요."></textarea>
+        </div>
+        <button class="btn" onclick="submitChat()">의견 등록하기 (최신 1개 유지)</button>
+      </div>
+
+      <div class="card">
+        <div class="discussion-header">
+          <h3>💬 실시간 토론 목록 <span id="chatCount" style="color:var(--primary);">(0)</span></h3>
+        </div>
+        <div id="chatList"></div>
+      </div>
+
+      <div class="card" style="border: 2px solid #10b981; background: #f0fdf4;">
+        <h3>🎓 [최종 정리] 토론을 마친 후 내 최종 의견 작성하기</h3>
+        <p style="font-size:0.9rem; color:#065f46; margin-bottom:10px;">친구들의 의견을 종합하여 정리한 나의 최종 수학적 개념/풀이 정리를 제출해 주세요 (새로 작성 시 최신글만 발표 화면에 반영됩니다).</p>
+        <div class="form-group">
+          <textarea id="finalInput" class="form-control" placeholder="예: 친구들과 토론 결과, 이 문제를 해결하는 가장 간단한 방법은 ~라고 정리했습니다."></textarea>
+        </div>
+        <button class="btn btn-success" onclick="submitFinalSummary()">최종 의견 제출하기</button>
+      </div>
+    </div>
+
+    <!-- 3. 교사 관리 화면 (수업 선택/개설 -> 주제 및 발표 관리) -->
+    <div id="teacherView" class="card hidden" style="border: 2px solid #4f46e5;">
+      <h2>🔒 교사 관리자 & 발표 화면 설정</h2>
+      <hr style="margin: 16px 0;">
+
+      <!-- 3-1. 수업 개설 및 선택 -->
+      <div style="background: #f9fafb; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+        <h3>🏫 수업 개설 및 선택</h3>
+        <div class="form-row" style="margin-top: 10px;">
+          <div class="form-group">
+            <input type="text" id="newClassNameInput" class="form-control" placeholder="새 수업 이름 (예: 3학년 1반 수학)">
+          </div>
+          <button class="btn" style="width: auto; white-space: nowrap;" onclick="addClass()">수업 개설</button>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="teacherClassSelect">관리할 수업 선택</label>
+          <select id="teacherClassSelect" class="form-control" onchange="onTeacherClassChange(this.value)">
+            <option value="">-- 수업을 선택하세요 --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 3-2. 선택된 수업 관리 패널 -->
+      <div id="teacherClassPanel" class="hidden">
+        <!-- 주제 관리 -->
+        <h3 style="display:flex; justify-content:space-between; align-items:center;">
+          <span>📝 토론 주제 설정 (최대 5개)</span>
+          <button class="btn-danger" onclick="deleteCurrentClass()">이 수업 전체 삭제</button>
+        </h3>
+        <div id="topicAdminForm" style="margin-top:12px;"></div>
+        <button class="btn" style="margin-top:10px;" onclick="saveTopics()">주제 저장 및 적용하기</button>
+
+        <hr style="margin: 24px 0;">
+
+        <!-- 발표 모드 및 PDF 저장 -->
+        <h3>📺 수업 발표화면 띄우기 & PDF 저장</h3>
+        <p style="font-size:0.9rem; color:#6b7280; margin-bottom:12px;">주제를 선택하고 학생 제출물을 클릭하면 해당 학생의 내용만 대형 발표 화면(형광펜 기능 포함)으로 열립니다.</p>
+        
+        <div class="form-group">
+          <select id="presentTopicSelect" class="form-control" onchange="loadTeacherTopicData()">
+            <option value="">-- 주제를 선택하세요 --</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:20px;">
+          <button class="btn-present" style="margin-top:0;" onclick="openFullscreenPresentation()">🖥️ 선택한 주제 전체 발표 창 열기</button>
+          <button class="btn btn-secondary" style="width:200px;" onclick="exportToPDF()">📄 PDF로 저장/인쇄</button>
+        </div>
+
+        <!-- 제출물 리스트 및 삭제 관리 -->
+        <h4 style="margin-top:20px; color:#1e40af;">🎓 학생들의 최종 정리 제출 목록 (클릭시 개별 발표)</h4>
+        <div id="presentationArea" class="present-grid"></div>
+
+        <h4 style="margin-top:30px; color:#dc2626;">🗑️ 학생들의 실시간 의견 관리 (삭제)</h4>
+        <div id="adminChatArea" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getFirestore, collection, addDoc, deleteDoc, getDocs, onSnapshot, query, where, orderBy, doc, setDoc, updateDoc, increment, serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAR8-iDEDwCMcoXM2dUE0j5qAe39CYUAcQ",
+      authDomain: "math-chantteacher.firebaseapp.com",
+      projectId: "math-chantteacher",
+      storageBucket: "math-chantteacher.firebasestorage.app",
+      messagingSenderId: "16801066944",
+      appId: "1:16801066944:web:5cb602f8824e33fa6be225",
+      measurementId: "G-ZWKVVX1ZJF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 전역 상태 관리
+    let currentClassId = null;
+    let currentTopicId = null;
+    let currentStudent = "";
+    
+    let classesList = [];
+    let topicsData = [];
+    let chatsData = [];
+    let unsubscribeChats = null;
+
+    // DOM 요소를 글로벌 변수로
+    const loginView = document.getElementById("loginView");
+    const discussionView = document.getElementById("discussionView");
+    const teacherView = document.getElementById("teacherView");
+
+    // ----------------------------------------------------
+    // 1. 수업 목록 실시간 동기화
+    // ----------------------------------------------------
+    onSnapshot(query(collection(db, "classes"), orderBy("createdAt", "desc")), (snapshot) => {
+      classesList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderClassDropdowns();
+    });
+
+    function renderClassDropdowns() {
+      const studentSelect = document.getElementById("studentClassSelect");
+      const teacherSelect = document.getElementById("teacherClassSelect");
+
+      const currentStudentVal = studentSelect.value;
+      const currentTeacherVal = teacherSelect.value;
+
+      studentSelect.innerHTML = '<option value="">-- 수업을 선택하세요 --</option>';
+      teacherSelect.innerHTML = '<option value="">-- 수업을 선택하세요 --</option>';
+
+      classesList.forEach(c => {
+        studentSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        teacherSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+      });
+
+      studentSelect.value = currentStudentVal;
+      teacherSelect.value = currentTeacherVal;
+    }
+
+    // ----------------------------------------------------
+    // 2. 학생 흐름: 수업 선택 -> 주제 불러오기 -> 입장
+    // ----------------------------------------------------
+    window.onStudentClassChange = async (classId) => {
+      const topicList = document.getElementById("topicList");
+      if(!classId) {
+        topicList.innerHTML = "<p style='color:#9ca3af;'>수업을 먼저 선택하시면 토론 주제 목록이 나타납니다.</p>";
+        return;
+      }
+
+      currentClassId = classId;
+      topicList.innerHTML = "<p style='color:#9ca3af;'>토론 주제를 불러오는 중...</p>";
+
+      const topicsSnap = await getDocs(query(collection(db, `classes/${classId}/topics`), orderBy("id", "asc")));
+      topicsData = topicsSnap.docs.map(d => d.data());
+
+      renderStudentTopicList();
+    };
+
+    function renderStudentTopicList() {
+      const topicList = document.getElementById("topicList");
+      topicList.innerHTML = "";
+      if(topicsData.length === 0) {
+        topicList.innerHTML = "<p style='color:#9ca3af;'>등록된 주제가 없습니다. 선생님께 문의하세요.</p>";
+        return;
+      }
+      topicsData.forEach((t) => {
+        if(!t.title) return;
+        const item = document.createElement("div");
+        item.className = "list-card";
+        item.innerHTML = `<div><h3>📐 ${t.title}</h3><p>${t.desc || ''}</p></div>`;
+        item.onclick = () => enterDiscussion(t);
+        topicList.appendChild(item);
+      });
+    }
+
+    window.enterDiscussion = (topic) => {
+      const num = document.getElementById("studentNum").value.trim();
+      const name = document.getElementById("studentName").value.trim();
+      const consent = document.getElementById("privacyConsent").checked;
+
+      if(!currentClassId) return alert("수업을 먼저 선택해주세요!");
+      if (!num) {
+        alert("학번을 입력해 주세요!");
+        document.getElementById("studentNum").focus();
+        return;
+      }
+      if (!name) {
+        alert("이름을 입력해 주세요!");
+        document.getElementById("studentName").focus();
+        return;
+      }
+      if (!consent) {
+        alert("개인 정보 수집 및 이용에 동의해 주세요.");
+        document.getElementById("privacyConsent").focus();
+        return;
+      }
+
+      currentStudent = `${num} ${name}`;
+      currentTopicId = topic.id;
+
+      document.getElementById("currentTopicTitle").innerText = topic.title;
+      document.getElementById("currentTopicDesc").innerText = topic.desc || "";
+
+      loginView.classList.add("hidden");
+      discussionView.classList.remove("hidden");
+
+      subscribeDiscussionData();
+    };
+
+    window.exitDiscussion = () => {
+      if(unsubscribeChats) { unsubscribeChats(); unsubscribeChats = null; }
+      discussionView.classList.add("hidden");
+      loginView.classList.remove("hidden");
+      currentTopicId = null;
+    };
+
+    // 실시간 의견 동기화
+    function subscribeDiscussionData() {
+      const chatQ = query(
+        collection(db, `classes/${currentClassId}/topics/${currentTopicId}/chats`), 
+        orderBy("createdAt", "desc")
+      );
+      
+      unsubscribeChats = onSnapshot(chatQ, (snapshot) => {
+        chatsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderChats();
+      });
+    }
+
+    // 의견 등록 (기존 작성건 삭제 후 최신 1개 유지)
+    window.submitChat = async () => {
+      const input = document.getElementById("chatInput");
+      const text = input.value.trim();
+      if(!text) return alert("의견을 입력해 주세요!");
+
+      try {
+        const chatsRef = collection(db, `classes/${currentClassId}/topics/${currentTopicId}/chats`);
+        const existingQ = query(chatsRef, where("author", "==", currentStudent));
+        const snapshot = await getDocs(existingQ);
+        const deletePromises = snapshot.docs.map(d => deleteDoc(doc(chatsRef, d.id)));
+        await Promise.all(deletePromises);
+
+        await addDoc(chatsRef, {
+          author: currentStudent,
+          content: text,
+          likes: 0,
+          createdAt: new Date()
+        });
+        
+        input.value = "";
+      } catch (e) {
+        console.error("의견 등록 오류:", e);
+        alert("의견 등록에 실패했습니다.");
+      }
+    };
+
+    function renderChats() {
+      const chatList = document.getElementById("chatList");
+      document.getElementById("chatCount").innerText = `(${chatsData.length})`;
+      chatList.innerHTML = "";
+
+      if(chatsData.length === 0) {
+        chatList.innerHTML = "<p style='color:#9ca3af; text-align:center; padding:20px;'>아직 등록된 의견이 없습니다.</p>";
+        return;
+      }
+
+      chatsData.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "chat-card";
+        div.innerHTML = `
+          <div class="chat-meta">
+            <span class="chat-author">${c.author}</span>
+            <span>${c.createdAt ? new Date(c.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</span>
+          </div>
+          <div class="chat-body">${c.content}</div>
+          <div class="chat-footer">
+            <button class="btn-sm" onclick="likeChat('${c.id}')">❤️ 공감 ${c.likes || 0}</button>
+          </div>
+        `;
+        chatList.appendChild(div);
+      });
+    }
+
+    window.likeChat = async (id) => {
+      await updateDoc(doc(db, `classes/${currentClassId}/topics/${currentTopicId}/chats`, id), { likes: increment(1) });
+    };
+
+    // 최종 정리 제출
+    window.submitFinalSummary = async () => {
+      const input = document.getElementById("finalInput");
+      const text = input.value.trim();
+      if(!text) return alert("최종 의견 내용을 입력해 주세요!");
+
+      try {
+        const finalsRef = collection(db, `classes/${currentClassId}/topics/${currentTopicId}/finals`);
+        const existingQ = query(finalsRef, where("author", "==", currentStudent));
+        const snapshot = await getDocs(existingQ);
+        const deletePromises = snapshot.docs.map(d => deleteDoc(doc(finalsRef, d.id)));
+        await Promise.all(deletePromises);
+
+        await addDoc(finalsRef, {
+          author: currentStudent,
+          content: text,
+          createdAt: new Date()
+        });
+
+        alert("최종 의견이 최신 버전으로 저장되었습니다!");
+        input.value = "";
+      } catch (e) {
+        console.error("최종 제출 오류:", e);
+        alert("최종 의견 제출에 실패했습니다.");
+      }
+    };
+
+
+    // ----------------------------------------------------
+    // 3. 교사 관리 모드 (비밀번호 입력 창 마스킹 적용)
+    // ----------------------------------------------------
+    window.toggleTeacherMode = () => {
+      if(teacherView.classList.contains("hidden")) {
+        const modal = document.getElementById("passwordModal");
+        const pwInput = document.getElementById("modalPasswordInput");
+        pwInput.value = "";
+        modal.classList.remove("hidden");
+        pwInput.focus();
+      } else {
+        teacherView.classList.add("hidden");
+        loginView.classList.remove("hidden");
+      }
+    };
+
+    window.verifyTeacherPassword = () => {
+      const pwInput = document.getElementById("modalPasswordInput");
+      const pw = pwInput.value;
+      if(pw === "mathchan") { // 교사 비밀번호
+        closePasswordModal();
+        teacherView.classList.remove("hidden");
+        loginView.classList.add("hidden");
+        discussionView.classList.add("hidden");
+      } else {
+        alert("비밀번호가 올바르지 않습니다.");
+        pwInput.value = "";
+        pwInput.focus();
+      }
+    };
+
+    window.closePasswordModal = () => {
+      document.getElementById("passwordModal").classList.add("hidden");
+    };
+
+    // 새 수업 개설
+    window.addClass = async () => {
+      const input = document.getElementById("newClassNameInput");
+      const name = input.value.trim();
+      if(!name) return alert("수업 이름을 입력하세요.");
+
+      try {
+        await addDoc(collection(db, "classes"), {
+          name: name,
+          createdAt: serverTimestamp()
+        });
+        input.value = "";
+        alert("새 수업이 성공적으로 개설되었습니다!");
+      } catch(e) {
+        alert("수업 개설 실패: " + e.message);
+      }
+    };
+
+    // 수업 삭제
+    window.deleteCurrentClass = async () => {
+      if(!currentClassId) return;
+      if(confirm("정말로 이 수업을 삭제하시겠습니까?")) {
+        await deleteDoc(doc(db, "classes", currentClassId));
+        alert("수업이 삭제되었습니다.");
+        document.getElementById("teacherClassSelect").value = "";
+        document.getElementById("teacherClassPanel").classList.add("hidden");
+        currentClassId = null;
+      }
+    };
+
+    // 교사 수업 선택 변경
+    window.onTeacherClassChange = async (classId) => {
+      const panel = document.getElementById("teacherClassPanel");
+      if(!classId) {
+        panel.classList.add("hidden");
+        currentClassId = null;
+        return;
+      }
+
+      currentClassId = classId;
+      panel.classList.remove("hidden");
+
+      // 해당 수업의 주제 데이터 가져오기
+      const topicsSnap = await getDocs(query(collection(db, `classes/${classId}/topics`), orderBy("id", "asc")));
+      topicsData = topicsSnap.docs.map(d => d.data());
+
+      renderTeacherTopicForms();
+      updatePresentSelect();
+    };
+
+    function renderTeacherTopicForms() {
+      const container = document.getElementById("topicAdminForm");
+      container.innerHTML = "";
+      for(let i = 0; i < 5; i++) {
+        const t = topicsData.find(item => item.id === i+1) || { id: i+1, title: "", desc: "" };
+        container.innerHTML += `
+          <div style="background:#f9fafb; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #e5e7eb;">
+            <strong>주제 ${i+1}</strong>
+            <input type="text" id="topicTitle_${i}" class="form-control" style="margin:4px 0;" placeholder="토론 주제 제목" value="${t.title || ''}">
+            <input type="text" id="topicDesc_${i}" class="form-control" placeholder="주제 세부 설명" value="${t.desc || ''}">
+          </div>
+        `;
+      }
+    }
+
+    window.saveTopics = async () => {
+      if(!currentClassId) return alert("수업을 선택해주세요.");
+
+      for(let i = 0; i < 5; i++) {
+        const title = document.getElementById(`topicTitle_${i}`).value.trim();
+        const desc = document.getElementById(`topicDesc_${i}`).value.trim();
+        const topicRef = doc(db, `classes/${currentClassId}/topics`, `topic_${i+1}`);
+        
+        if(title) {
+          await setDoc(topicRef, { id: i+1, title: title, desc: desc });
+        } else {
+          await deleteDoc(topicRef);
+        }
+      }
+
+      alert("주제가 저장 및 적용되었습니다!");
+      // 주제 목록 재로드
+      const topicsSnap = await getDocs(query(collection(db, `classes/${currentClassId}/topics`), orderBy("id", "asc")));
+      topicsData = topicsSnap.docs.map(d => d.data());
+      updatePresentSelect();
+    };
+
+    function updatePresentSelect() {
+      const select = document.getElementById("presentTopicSelect");
+      select.innerHTML = '<option value="">-- 주제를 선택하세요 --</option>';
+      topicsData.forEach(t => {
+        if(t.title) select.innerHTML += `<option value="${t.id}">${t.title}</option>`;
+      });
+      document.getElementById("presentationArea").innerHTML = "";
+      document.getElementById("adminChatArea").innerHTML = "";
+    }
+
+    // 교사 주제 데이터(제출물 + 채팅) 관리 불러오기
+    window.loadTeacherTopicData = () => {
+      const topicId = document.getElementById("presentTopicSelect").value;
+      const area = document.getElementById("presentationArea");
+      const chatArea = document.getElementById("adminChatArea");
+      area.innerHTML = "";
+      chatArea.innerHTML = "";
+
+      if(!topicId || !currentClassId) return;
+
+      // 1) 최종 제출물
+      onSnapshot(query(collection(db, `classes/${currentClassId}/topics/${topicId}/finals`), orderBy("createdAt", "desc")), (snapshot) => {
+        area.innerHTML = "";
+        if(snapshot.empty) {
+          area.innerHTML = "<p style='color:#9ca3af;'>제출된 최종 의견이 없습니다.</p>";
+          return;
+        }
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          const card = document.createElement("div");
+          card.className = "final-card";
+          card.innerHTML = `
+            <h4>
+              <span>👤 ${data.author}</span>
+              <button class="btn-danger" onclick="event.stopPropagation(); deleteFinalItem('${topicId}', '${d.id}')">삭제</button>
+            </h4>
+            <p style="white-space:pre-wrap; font-size:1rem; color:#1f2937;">${data.content}</p>
+          `;
+          card.onclick = () => openSinglePresentation(topicId, data.author, data.content);
+          area.appendChild(card);
+        });
+      });
+
+      // 2) 실시간 의견
+      onSnapshot(query(collection(db, `classes/${currentClassId}/topics/${topicId}/chats`), orderBy("createdAt", "desc")), (snapshot) => {
+        chatArea.innerHTML = "";
+        if(snapshot.empty) {
+          chatArea.innerHTML = "<p style='color:#9ca3af;'>등록된 실시간 의견이 없습니다.</p>";
+          return;
+        }
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          const div = document.createElement("div");
+          div.className = "admin-list-item";
+          div.innerHTML = `
+            <div class="admin-list-content">
+              <strong>${data.author}</strong>: ${data.content}
+            </div>
+            <button class="btn-danger" onclick="deleteChatItem('${topicId}', '${d.id}')">삭제</button>
+          `;
+          chatArea.appendChild(div);
+        });
+      });
+    };
+
+    // 데이터 삭제 처리
+    window.deleteFinalItem = async (topicId, docId) => {
+      if(confirm("해당 학생의 최종 제출물을 삭제하시겠습니까?")) {
+        await deleteDoc(doc(db, `classes/${currentClassId}/topics/${topicId}/finals`, docId));
+      }
+    };
+
+    window.deleteChatItem = async (topicId, docId) => {
+      if(confirm("해당 실시간 의견을 삭제하시겠습니까?")) {
+        await deleteDoc(doc(db, `classes/${currentClassId}/topics/${topicId}/chats`, docId));
+      }
+    };
+
+    // PDF 저장/출력
+    window.exportToPDF = () => {
+      const topicId = document.getElementById("presentTopicSelect").value;
+      if(!topicId) return alert("PDF로 출력할 주제를 선택해 주세요.");
+
+      const selectedTopic = topicsData.find(t => t.id == topicId);
+      const printWindow = window.open("", "_blank");
+      
+      const content = document.getElementById("presentationArea").innerHTML;
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${selectedTopic ? selectedTopic.title : '토론 결과'} - PDF 저장</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+            h1 { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            .final-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 8px; page-break-inside: avoid; }
+            .btn-danger { display: none; }
+            h4 { margin-bottom: 8px; color: #1d4ed8; }
+          </style>
+        </head>
+        <body>
+          <h1>📐 ${selectedTopic ? selectedTopic.title : '토론 결과'} 제출 목록</h1>
+          <div>${content}</div>
+          <script>
+            window.onload = function() { window.print(); }
+          <\/script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    };
+
+    // 4. 단일 학생 선택 대형 화면 (형광펜 기능 포함)
+    window.openSinglePresentation = (topicId, author, content) => {
+      const selectedTopic = topicsData.find(t => t.id == topicId);
+      const presentWindow = window.open("", "_blank");
+      
+      presentWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="ko">
+        <head>
+          <meta charset="UTF-8">
+          <title>${author} 학생 발표 화면</title>
+          <style>
+            body { background-color: #0f172a; color: white; font-family: 'Pretendard', sans-serif; padding: 30px; margin:0; }
+            .tools { position: fixed; top: 20px; right: 20px; z-index: 1000; background: rgba(30, 41, 59, 0.9); padding: 10px 16px; border-radius: 12px; border: 1px solid #38bdf8; display: flex; gap: 10px; }
+            .tool-btn { background: #38bdf8; color: #0f172a; border: none; padding: 8px 16px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+            .tool-btn.active { background: #facc15; }
+            .tool-btn-clear { background: #ef4444; color: white; }
+            
+            header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #334155; padding-bottom: 15px; }
+            h1 { font-size: 2.2rem; color: #38bdf8; margin: 0; }
+            p { font-size: 1.2rem; color: #94a3b8; margin-top: 5px; }
+            
+            .present-card { background: #1e293b; border: 3px solid #38bdf8; border-radius: 20px; padding: 40px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative; }
+            .author-tag { font-size: 2.2rem; color: #facc15; font-weight: bold; margin-bottom: 20px; border-bottom: 2px dashed #475569; padding-bottom: 12px; }
+            
+            .content-box { position: relative; font-size: 2.4rem; line-height: 1.8; color: #f8fafc; white-space: pre-wrap; word-break: break-all; }
+            
+            #drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+            #drawCanvas.active { pointer-events: auto; cursor: crosshair; }
+          </style>
+        </head>
+        <body>
+          <div class="tools">
+            <button class="tool-btn" id="penBtn" onclick="togglePen()">🖍️ 형광펜 켜기</button>
+            <button class="tool-btn tool-btn-clear" onclick="clearCanvas()">🧹 밑줄 전체 지우기</button>
+          </div>
+
+          <header>
+            <h1>📐 ${selectedTopic ? selectedTopic.title : '수학 토론 발표'}</h1>
+            <p>발표자 내용 대형 스크린</p>
+          </header>
+
+          <div class="present-card" id="cardContainer">
+            <div class="author-tag">👤 발표자: ${author}</div>
+            <div class="content-box">
+              ${content}
+              <canvas id="drawCanvas"></canvas>
+            </div>
+          </div>
+
+          <script>
+            const canvas = document.getElementById('drawCanvas');
+            const ctx = canvas.getContext('2d');
+            const container = document.querySelector('.content-box');
+            let isDrawing = false;
+            let penEnabled = false;
+
+            function resizeCanvas() {
+              canvas.width = container.offsetWidth;
+              canvas.height = container.offsetHeight;
+            }
+            window.onload = resizeCanvas;
+            window.onresize = resizeCanvas;
+
+            function togglePen() {
+              penEnabled = !penEnabled;
+              const btn = document.getElementById('penBtn');
+              if(penEnabled) {
+                btn.classList.add('active');
+                btn.innerText = '🖍️ 형광펜 끄기';
+                canvas.classList.add('active');
+              } else {
+                btn.classList.remove('active');
+                btn.innerText = '🖍️ 형광펜 켜기';
+                canvas.classList.remove('active');
+              }
+            }
+
+            function clearCanvas() {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            canvas.addEventListener('mousedown', (e) => {
+              if(!penEnabled) return;
+              isDrawing = true;
+              ctx.beginPath();
+              const rect = canvas.getBoundingClientRect();
+              ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+              if (!isDrawing || !penEnabled) return;
+              const rect = canvas.getBoundingClientRect();
+              ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+              ctx.strokeStyle = 'rgba(250, 204, 21, 0.45)';
+              ctx.lineWidth = 24;
+              ctx.lineCap = 'round';
+              ctx.stroke();
+            });
+
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mouseleave', () => isDrawing = false);
+          <\/script>
+        </body>
+        </html>
+      `);
+    };
+
+    // 전체 학생 발표 창
+    window.openFullscreenPresentation = () => {
+      const topicId = document.getElementById("presentTopicSelect").value;
+      if(!topicId || !currentClassId) return alert("발표할 토론 주제를 먼저 선택해 주세요!");
+
+      const selectedTopic = topicsData.find(t => t.id == topicId);
+      const titleText = selectedTopic ? selectedTopic.title : "수학 토론 결과";
+
+      const presentWindow = window.open("", "_blank");
+      presentWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="ko">
+        <head>
+          <meta charset="UTF-8">
+          <title>${titleText} - 전체 발표 화면</title>
+          <style>
+            body { background-color: #0f172a; color: white; font-family: 'Pretendard', sans-serif; padding: 40px; }
+            header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #334155; padding-bottom: 20px; }
+            h1 { font-size: 2.5rem; color: #38bdf8; margin-bottom: 10px; }
+            p { font-size: 1.3rem; color: #94a3b8; }
+            .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 24px; }
+            .card { background: #1e293b; border: 2px solid #38bdf8; border-radius: 16px; padding: 24px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+            .card h3 { color: #f3f4f6; font-size: 1.4rem; border-bottom: 1px solid #475569; padding-bottom: 10px; margin-bottom: 14px; }
+            .card p { color: #e2e8f0; font-size: 1.2rem; line-height: 1.6; white-space: pre-wrap; }
+          </style>
+        </head>
+        <body>
+          <header>
+            <h1>📐 ${titleText}</h1>
+            <p>실시간 학생 최종 정리 전체 목록</p>
+          </header>
+          <div id="displayArea" class="grid"><p style="color:#64748b; font-size:1.5rem; text-align:center; grid-column: 1/-1;">의견을 불러오는 중...</p></div>
+        </body>
+        </html>
+      `);
+
+      const area = presentWindow.document.getElementById("displayArea");
+      onSnapshot(query(collection(db, `classes/${currentClassId}/topics/${topicId}/finals`), orderBy("createdAt", "desc")), (snapshot) => {
+        area.innerHTML = "";
+        if(snapshot.empty) {
+          area.innerHTML = "<p style='color:#64748b; font-size:1.5rem; text-align:center; grid-column: 1/-1;'>제출된 최종 의견이 없습니다.</p>";
+          return;
+        }
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          area.innerHTML += `
+            <div class="card">
+              <h3>👤 ${data.author}</h3>
+              <p>${data.content}</p>
+            </div>
+          `;
+        });
+      });
+    };
+  </script>
+</body>
+</html>
